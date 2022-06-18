@@ -1,0 +1,18 @@
+installCRDs: true
+
+image:
+  repository: sazacr.azurecr.io/jetstack/cert-manager-controller
+  # tag: v1.5.4
+
+nodeSelector:
+  kubernetes.io/os: linux
+
+webhook:
+  image:
+    repository: sazacr.azurecr.io/jetstack/cert-manager-webhook
+    # tag: v1.5.4
+
+cainjector:
+  image:
+    repository: sazacr.azurecr.io/jetstack/cert-manager-cainjector
+    # tag: v1.5.4
