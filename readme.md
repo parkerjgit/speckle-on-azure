@@ -48,11 +48,10 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
         db_password         = "passWORD123!"
         external_ip         = <your_external_ip>
         ``` 
-        <details> Notes, 
-            * resource_group_name is from step 1
-            * db_username/password can be anything
-            * can get your external ip with: `curl "http://myexternalip.com/raw"`
-        <details>
+    * Notes:
+        * resource_group_name is from step 1
+        * db_username/password can be anything
+        * can get your external ip with: `curl "http://myexternalip.com/raw"`
 1. Create resources
     1. Initialize terraform and provision cloud resources. 
         ```sh
@@ -161,6 +160,76 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
         ```
         kubectl get all
         kubectl describe svc kubernetes
+        ```
+
+### 2. Deploy Ingress Controller
+
+1. Provision dependancies
+    1. get resource group
+        ```
+        az aks show --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER --query nodeResourceGroup -o tsv
+        ```
+    1. create static ip
+        ```
+        az network public-ip create \
+            --resource-group MC_dt-sandbox-resources_saz-dev-akscluster_eastus \
+            --name sazDevPip \
+            --sku Standard \
+            --allocation-method static \
+            --query publicIp.ipAddress \
+            -o tsv
+        ```
+    1. Import nginx images into your Azure Container Registry (ACR)
+        ```
+        REGISTRY_NAME="sazacr"
+        SOURCE_REGISTRY=k8s.gcr.io
+        CONTROLLER_IMAGE=ingress-nginx/controller
+        CONTROLLER_TAG=v1.0.4
+        PATCH_IMAGE=ingress-nginx/kube-webhook-certgen
+        PATCH_TAG=v1.1.1
+        DEFAULTBACKEND_IMAGE=defaultbackend-amd64
+        DEFAULTBACKEND_TAG=1.5
+        CERT_MANAGER_REGISTRY=quay.io
+        CERT_MANAGER_TAG=v1.5.4
+        CERT_MANAGER_IMAGE_CONTROLLER=jetstack/cert-manager-controller
+        CERT_MANAGER_IMAGE_WEBHOOK=jetstack/cert-manager-webhook
+        CERT_MANAGER_IMAGE_CAINJECTOR=jetstack/cert-manager-cainjector
+
+        az acr import --name $REGISTRY_NAME --source $SOURCE_REGISTRY/$CONTROLLER_IMAGE:$CONTROLLER_TAG --image $CONTROLLER_IMAGE:$CONTROLLER_TAG
+        az acr import --name $REGISTRY_NAME --source $SOURCE_REGISTRY/$PATCH_IMAGE:$PATCH_TAG --image $PATCH_IMAGE:$PATCH_TAG
+        az acr import --name $REGISTRY_NAME --source $SOURCE_REGISTRY/$DEFAULTBACKEND_IMAGE:$DEFAULTBACKEND_TAG --image $DEFAULTBACKEND_IMAGE:$DEFAULTBACKEND_TAG
+        az acr import --name $REGISTRY_NAME --source $CERT_MANAGER_REGISTRY/$CERT_MANAGER_IMAGE_CONTROLLER:$CERT_MANAGER_TAG --image $CERT_MANAGER_IMAGE_CONTROLLER:$CERT_MANAGER_TAG
+        az acr import --name $REGISTRY_NAME --source $CERT_MANAGER_REGISTRY/$CERT_MANAGER_IMAGE_WEBHOOK:$CERT_MANAGER_TAG --image $CERT_MANAGER_IMAGE_WEBHOOK:$CERT_MANAGER_TAG
+        az acr import --name $REGISTRY_NAME --source $CERT_MANAGER_REGISTRY/$CERT_MANAGER_IMAGE_CAINJECTOR:$CERT_MANAGER_TAG --image $CERT_MANAGER_IMAGE_CAINJECTOR:$CERT_MANAGER_TAG
+
+        az acr repository list --name $ACR --output table
+        ```
+1. Configure ingress controller to be installed
+    1. Update `containers/ingress-nginx/values.yaml` file with your values:
+1. Install nginx ingress controller
+    1. Register helm repository
+        ```
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        ```
+    2. Install container
+        ```
+        helm install nginx-ingress ingress-nginx/ingress-nginx 
+            --version 4.0.13 
+            --namespace default 
+            -f ./ingress-nginx/values.yaml
+        ```
+1. Perform sanity checks
+    1. Verify static IP address is assigned (It may take a few minutes for the LoadBalancer IP to be available)
+        ```
+        kubectl --namespace default get services -o wide -w nginx-ingress-ingress-nginx-controller
+        ```
+    1. Verify that the DNS name label has been applied by querying the FQDN on the public IP
+        ```
+        az network public-ip list --resource-group MC_dt-sandbox-resources_saz-dev-akscluster_eastus --query "[?name=='sazDevPip'].[dnsSettings.fqdn]" -o tsv
+        ```
+    1. Ensure that no event errors
+        ```
+        kubectl describe svc nginx-ingress
         ```
 
 ### 3. Deploy Certificate Manager
