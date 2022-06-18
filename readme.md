@@ -1,6 +1,6 @@
 # Speckle on Azure
 
-A minimal serverless environment for running Speckle Server on Azure (AKS). This is a proof of concept for exploring a subset of production concerns, it is *NOT* intended to be used as a template for standing up a production environment. If you want to get a *full* production environment up and running quickly, check out [Speckle Enterprise](https://speckle.systems/getstarted/). 
+A minimal serverless environment for running Speckle Server on Azure (AKS). This is a proof of concept exploring a basic set of production concerns, it is *NOT* intended to be used as a template for standing up a production environment. If you want to get a *full* production environment up and running quickly, check out [Speckle Enterprise](https://speckle.systems/getstarted/). 
 
 ## Overview
 
@@ -162,7 +162,7 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
         kubectl describe svc kubernetes
         ```
 
-### 2. Deploy Ingress Controller
+### 3. Deploy Ingress Controller
 
 1. Provision dependancies
     1. get resource group
@@ -232,7 +232,47 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
         kubectl describe svc nginx-ingress
         ```
 
-### 3. Deploy Certificate Manager
-### 4. Deploy Certificate Authority (CA) Issuer
+### 4. Deploy Certificate Manager
+
+1. Configure resources
+    1. Update `containers/cert-manager/values.yaml` with your values
+    1. Update `containers/cert-manger/cluster-issuer.yaml` with your values
+1. Install cert manager
+    1. Label the cert-manager namespace to disable resource validation
+        ```
+        kubectl label namespace default cert-manager.io/disable-validation=true
+        ```
+    1. add to repo
+        ```
+        helm repo add jetstack https://charts.jetstack.io
+        helm repo update
+        ```
+    1. install in default namespace
+        ```
+        helm install cert-manager jetstack/cert-manager \
+            --namespace default \
+            --version $CERT_MANAGER_TAG \
+            -f ./cert-manager/values.yaml
+        ```
+    1. validate install
+        ```
+        helm list
+        ```
+    * notes:
+        * https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#install-cert-manager
+        * https://github.com/cert-manager/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
+1. Create a CA cluster issuer
+    1. create issuer 
+        ```
+        kubectl apply -f ./cert-manager/cluster-issuer.yaml --namespace default
+        ```
+    1. validate
+        ```
+        kubectl get clusterissuer
+        ```
+    * notes:
+        * see https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#create-a-ca-cluster-issuer
+
 ### 5. Deploy Speckle
 ### 6. CLEAN UP
+
