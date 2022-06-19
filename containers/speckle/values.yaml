@@ -1,0 +1,26 @@
+# overrides https://github.com/specklesystems/helm/blob/2501afcd35fe7292905cecadb3fc00e79e273e22/charts/speckle-server/values.yaml
+
+namespace: default
+
+# external ip of the ingress controller
+# domain: d4092b66ed034388b3c9.eastus.aksapp.io
+# domain: localhost
+domain: saz-dev.eastus.cloudapp.azure.com
+ssl_canonical_url: true
+
+docker_image_tag: 2.6.3-alpha.4374
+
+# db:
+  # postgres_url: 'postgresql://psqladmin%40saz-dev-psql-server:passWORD123!@saz-dev-psql-server.postgres.database.azure.com:5432/saz-dev-psql-db'
+  # PGSSLMODE: allow
+
+# redis_url: 'redis://:UQ95cIdR9R8hFTDccNCW0YLqqO2skE5OVAzCaCVBwuE=@saz-dev-redis-cache.redis.cache.windows.net:6379'
+
+server:
+  # session_secret: 'auniquesecretforthisserver'
+  auth:
+    local:
+      enabled: true
+
+# cert_manager_issuer: ''
+cert_manager_issuer: letsencrypt-staging
