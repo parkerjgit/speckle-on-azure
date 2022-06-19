@@ -274,5 +274,62 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
         * see https://docs.microsoft.com/en-us/azure/aks/ingress-static-ip?tabs=azure-cli#create-a-ca-cluster-issuer
 
 ### 5. Deploy Speckle
+
+1. Configure Speckle
+    1. Update `containers/speckle/values.yaml` with your values
+    1. Create `containers/speckle/secrets.yaml`, for example:
+        ```
+        apiVersion: v1
+        kind: Secret
+        metadata:
+            name: server-vars
+            namespace: default
+        stringData:
+            postgres_url: 'postgresql://<psql_username>%40saz-dev-psql-server:<psql_password>@saz-dev-psql-server.postgres.database.azure.com:5432/saz-dev-psql-db'
+            redis_url: 'redis://:<access_key>@saz-dev-redis-cache.redis.cache.windows.net:6379'
+            session_secret: 'auniquesecretforthisserver'
+            email_password: ''
+            # s3_secret_key: minioadmin
+            google_client_secret: ''
+        ```
+1. Install Containers
+    1. install **helm chart** repo
+        ```
+        helm repo add speckle https://specklesystems.github.io/helm
+        ```
+    1. check avail repos/releases
+        ```
+        helm repo list
+        helm list
+        ```
+    1. install speckle server
+        ```sh
+        helm install speckle-server speckle/speckle-server -f ./speckle/values.yaml
+        ```
+    1. create secret object (secrets.yml) and apply:
+        ```sh
+        kubectl apply -f ./speckle/secrets.yaml
+        ```
+        * see also: https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-config-file/
+    1. create priority classes
+        ```sh
+        kubectl apply -f ./speckle/high-priority-class.yaml
+        kubectl apply -f ./speckle/low-priority-class.yaml
+        ```
+1. Perform sanity checks
+    1. Check that Pods are running
+        ```sh
+        kubectl get pods -o wide
+        ```
+    1. Check for errors
+        ```sh
+        kubectl describe deployment speckle-server
+        ```
+    1. Try endpoints!
+        ```
+        https://saz-dev.eastus.cloudapp.azure.com/
+        https://saz-dev.eastus.cloudapp.azure.com/graphql
+        ```
+
 ### 6. CLEAN UP
 
