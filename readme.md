@@ -4,7 +4,7 @@ A minimal serverless environment for running Speckle Server on Azure (AKS). This
 
 ## Overview
 
-![](.\images\speckle-aks-highlevel.drawio.png)
+![](images\speckle-aks-highlevel.drawio.png)
 
 1. Persistance Layer: Postgres & Redis (PaaS)
 2. Ingress Controller
